@@ -213,7 +213,7 @@ def evaluate(encoder, decoder, iter_index: int):
 
             decoded_chars = []
 
-            for i in range(9999999999):  # 9999999999 is just a random number
+            for i in range(20):  # 9999999999 is just a random number
                 dec_output, dec_hidden = decoder(dec_input, dec_hidden)
                 _, topi = dec_output.data.topk(1)
                 if topi.item() == all_letters.find(end_seq):
