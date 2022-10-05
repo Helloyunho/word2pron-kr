@@ -149,9 +149,9 @@ def train(
     dec_optimizer.zero_grad()
 
     for word, pronounce in train_batch:
-        input_tensor = wordToTensor(word)
+        input_tensor = wordToTensor(word).to(device)
         input_length = input_tensor.size(0)
-        target_tensor = wordToTensor(pronounce)
+        target_tensor = wordToTensor(pronounce).to(device)
         target_length = target_tensor.size(0)
 
         loss = 0
@@ -200,9 +200,9 @@ def evaluate(encoder, decoder, iter_index: int):
     with torch.no_grad():
         correct = 0
         for word, pronounce in test_batch:
-            input_tensor = wordToTensor(word)
+            input_tensor = wordToTensor(word).to(device)
             input_length = input_tensor.size(0)
-            target_tensor = wordToTensor(pronounce)
+            target_tensor = wordToTensor(pronounce).to(device)
             target_length = target_tensor.size(0)
 
             enc_hidden = encoder.initHidden()
