@@ -220,6 +220,7 @@ def evaluate(encoder, decoder, iter_index: int):
                     break
                 else:
                     decoded_chars.append(all_letters[topi.item()])
+                dec_input = topi.squeeze().detach()
 
             if pronounce == "".join(decoded_chars):
                 correct += 1
