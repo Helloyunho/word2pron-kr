@@ -202,8 +202,6 @@ def evaluate(encoder, decoder, iter_index: int):
         for word, pronounce in test_batch:
             input_tensor = wordToTensor(word)
             input_length = input_tensor.size(0)
-            target_tensor = wordToTensor(pronounce)
-            target_length = target_tensor.size(0)
 
             enc_hidden = encoder.initHidden()
 
@@ -215,11 +213,10 @@ def evaluate(encoder, decoder, iter_index: int):
 
             decoded_chars = []
 
-            for i in range(target_length):
+            for i in range(9999999999):  # 9999999999 is just a random number
                 dec_output, dec_hidden = decoder(dec_input, dec_hidden)
                 _, topi = dec_output.data.topk(1)
                 if topi.item() == all_letters.find(end_seq):
-                    decoded_chars.append(end_seq)
                     break
                 else:
                     decoded_chars.append(all_letters[topi.item()])
