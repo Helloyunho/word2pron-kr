@@ -197,37 +197,41 @@ def evaluate(encoder, decoder, iter_index: int):
     test_batch = list(testset.items())[start:end]
     # print(len(test_batch))
 
-    correct = 0
-    for word, pronounce in test_batch:
-        input_tensor = wordToTensor(word)
-        input_length = input_tensor.size(0)
-        target_tensor = wordToTensor(pronounce)
-        target_length = target_tensor.size(0)
+    with torch.no_grad():
+        correct = 0
+        for word, pronounce in test_batch:
+            input_tensor = wordToTensor(word)
+            input_length = input_tensor.size(0)
+            target_tensor = wordToTensor(pronounce)
+            target_length = target_tensor.size(0)
 
-        enc_hidden = encoder.initHidden()
+            enc_hidden = encoder.initHidden()
 
-        for i in range(input_length):
-            _, enc_hidden = encoder(input_tensor[i], enc_hidden)
+            for i in range(input_length):
+                _, enc_hidden = encoder(input_tensor[i], enc_hidden)
 
-        dec_input = torch.tensor([[all_letters.find(start_seq)]], device=device)
-        dec_hidden = enc_hidden
+            dec_input = torch.tensor([[all_letters.find(start_seq)]], device=device)
+            dec_hidden = enc_hidden
 
-        decoded_chars = []
+            decoded_chars = []
 
-        for i in range(target_length):
-            dec_output, dec_hidden = decoder(dec_input, dec_hidden)
-            _, topi = dec_output.data.topk(1)
-            if topi.item() == all_letters.find(end_seq):
-                decoded_chars.append(end_seq)
-                break
-            else:
-                decoded_chars.append(all_letters[topi.item()])
+            for i in range(target_length):
+                dec_output, dec_hidden = decoder(dec_input, dec_hidden)
+                _, topi = dec_output.data.topk(1)
+                if topi.item() == all_letters.find(end_seq):
+                    decoded_chars.append(end_seq)
+                    break
+                else:
+                    decoded_chars.append(all_letters[topi.item()])
 
-        if pronounce == "".join(decoded_chars):
-            correct += 1
+            if pronounce == "".join(decoded_chars):
+                correct += 1
 
-    size = len(test_batch)
-    return correct / size
+        size = len(test_batch)
+        if size != 0:
+            return correct / size
+        else:
+            return 0
 
 
 def timeSince(since):
