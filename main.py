@@ -160,20 +160,25 @@ def train(
             _, enc_hidden = encoder(input_tensor[i], enc_hidden)
 
         dec_input = torch.tensor([[all_letters.find(start_seq)]], device=device)
+        print(dec_input)
         dec_hidden = enc_hidden
 
         teacher_forcing = random.random() < teacher_forcing_ratio
         if teacher_forcing:
             for i in range(target_length):
+                print("teacher forced", dec_input)
                 dec_output, dec_hidden = decoder(dec_input, dec_hidden)
                 loss += criterion(dec_output, target_tensor[i])
-                dec_input = target_tensor[i]
+                dec_input = target_tensor[i].unsqueeze(1)
+                print("teacher forced processed", dec_input)
         else:
             for i in range(target_length):
+                print("self learning", dec_input)
                 dec_output, dec_hidden = decoder(dec_input, dec_hidden)
-                loss += criterion(dec_output, target_tensor[i])
                 _, topi = dec_output.topk(1)
-                dec_input = topi.squeeze().detach()
+                dec_input = topi.detach()
+                loss += criterion(dec_output, target_tensor[i])
+                print("self learning processed", dec_input)
                 if dec_input.item() == all_letters.find(end_seq):
                     break
 
@@ -210,7 +215,7 @@ def evaluate(encoder, decoder, iter_index: int):
             for i in range(input_length):
                 _, enc_hidden = encoder(input_tensor[i], enc_hidden)
 
-            dec_input = torch.tensor([[all_letters.find(start_seq)]], device=device)
+            dec_input = torch.tensor([all_letters.find(start_seq)], device=device)
             dec_hidden = enc_hidden
 
             decoded_chars = []
@@ -222,7 +227,7 @@ def evaluate(encoder, decoder, iter_index: int):
                     break
                 else:
                     decoded_chars.append(all_letters[topi.item()])
-                dec_input = topi.squeeze().detach()
+                dec_input = topi.detach()
 
             if pronounce == "".join(decoded_chars):
                 correct += 1
@@ -258,12 +263,15 @@ if __name__ == "__main__":
     val_acc = evaluate(encoder, decoder, 0)
     print("initial accuracy: %.4f" % (val_acc * 100))
 
+    loss = 0
+
     best = None
     for iter in range(1, n_iters + 1):
         val_loss = train(
             encoder, decoder, enc_optimizer, dec_optimizer, criterion, iter - 1
         )
         val_acc = evaluate(encoder, decoder, iter - 1)
+        loss += val_loss
 
         # Print iter number, loss, name and guess
         if iter % print_term == 0:
@@ -274,9 +282,10 @@ if __name__ == "__main__":
                     iter,
                     iter / n_iters * 100,
                     val_acc * 100,
-                    val_loss * 100,
+                    loss / print_term,
                 )
             )
+            loss = 0
 
         if best is None or val_loss < best:
             best = val_loss
