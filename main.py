@@ -160,25 +160,20 @@ def train(
             _, enc_hidden = encoder(input_tensor[i], enc_hidden)
 
         dec_input = torch.tensor([[all_letters.find(start_seq)]], device=device)
-        print(dec_input)
         dec_hidden = enc_hidden
 
         teacher_forcing = random.random() < teacher_forcing_ratio
         if teacher_forcing:
             for i in range(target_length):
-                print("teacher forced", dec_input)
                 dec_output, dec_hidden = decoder(dec_input, dec_hidden)
                 loss += criterion(dec_output, target_tensor[i])
                 dec_input = target_tensor[i].unsqueeze(1)
-                print("teacher forced processed", dec_input)
         else:
             for i in range(target_length):
-                print("self learning", dec_input)
                 dec_output, dec_hidden = decoder(dec_input, dec_hidden)
                 _, topi = dec_output.topk(1)
                 dec_input = topi.detach()
                 loss += criterion(dec_output, target_tensor[i])
-                print("self learning processed", dec_input)
                 if dec_input.item() == all_letters.find(end_seq):
                     break
 
@@ -215,12 +210,12 @@ def evaluate(encoder, decoder, iter_index: int):
             for i in range(input_length):
                 _, enc_hidden = encoder(input_tensor[i], enc_hidden)
 
-            dec_input = torch.tensor([all_letters.find(start_seq)], device=device)
+            dec_input = torch.tensor([[all_letters.find(start_seq)]], device=device)
             dec_hidden = enc_hidden
 
             decoded_chars = []
 
-            for i in range(target_length):  # 9999999999 is just a random number
+            for i in range(target_length):
                 dec_output, dec_hidden = decoder(dec_input, dec_hidden)
                 _, topi = dec_output.data.topk(1)
                 if topi.item() == all_letters.find(end_seq):
