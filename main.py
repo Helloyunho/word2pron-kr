@@ -26,27 +26,6 @@ def remove_other_char(word):
     return re.sub(r"[^가-힣ㄱ-ㅎㅏ-ㅣ ]", "", word)
 
 
-for xls in glob.glob("data/*.xls"):
-    wb = open_workbook(xls)
-    sheet = wb.sheet_by_index(0)
-    for r in range(1, sheet.nrows):
-        word = remove_other_char(sheet.cell(r, 0).value)
-        if word in word_pronounce or word == "":
-            continue
-        pronounce = sheet.cell(r, 8).value
-        if pronounce == "":
-            pronounce = word
-        else:
-            p = re.search(r"^\[([^\/\]]+)(?:\/[^\/\]]+)*\]$", pronounce, re.MULTILINE)
-            if p:
-                pronounce = remove_other_char(p.group(1))
-        word_pronounce[word] = pronounce
-
-randomized_set = random.choices(list(word_pronounce.items()), k=len(word_pronounce))
-
-trainset = dict(randomized_set[len(word_pronounce) // 8 :])
-testset = dict(randomized_set[: len(word_pronounce) // 8])
-
 start_seq = "\x02"
 end_seq = "\x03"
 all_letters = "\x02\x03 "
@@ -125,6 +104,7 @@ class Word2PronKRDecoder(nn.Module):
 
 
 def train(
+    trainset,
     encoder: Word2PronKREncoder,
     decoder: Word2PronKRDecoder,
     enc_optimizer,
@@ -186,7 +166,7 @@ def train(
     return 100
 
 
-def evaluate(encoder, decoder, iter_index: int):
+def evaluate(testset, encoder, decoder, iter_index: int):
     start = 64 * iter_index
     end = 64 * (iter_index + 1)
     if start >= len(testset):
@@ -243,6 +223,28 @@ def timeSince(since):
 
 
 if __name__ == "__main__":
+    for xls in glob.glob("data/*.xls"):
+        wb = open_workbook(xls)
+        sheet = wb.sheet_by_index(0)
+        for r in range(1, sheet.nrows):
+            word = remove_other_char(sheet.cell(r, 0).value)
+            if word in word_pronounce or word == "":
+                continue
+            pronounce = sheet.cell(r, 8).value
+            if pronounce == "":
+                pronounce = word
+            else:
+                p = re.search(
+                    r"^\[([^\/\]]+)(?:\/[^\/\]]+)*\]$", pronounce, re.MULTILINE
+                )
+                if p:
+                    pronounce = remove_other_char(p.group(1))
+            word_pronounce[word] = pronounce
+
+    randomized_set = random.choices(list(word_pronounce.items()), k=len(word_pronounce))
+
+    trainset = dict(randomized_set[len(word_pronounce) // 8 :])
+    testset = dict(randomized_set[: len(word_pronounce) // 8])
     start = time.time()
     encoder = Word2PronKREncoder(n_letters, n_hidden).to(device)
     decoder = Word2PronKRDecoder(n_letters, n_hidden).to(device)
@@ -255,7 +257,7 @@ if __name__ == "__main__":
     if dec_snapshot_path.exists():
         decoder.load_state_dict(torch.load(dec_snapshot_path))
 
-    val_acc = evaluate(encoder, decoder, 0)
+    val_acc = evaluate(testset, encoder, decoder, 0)
     print("initial accuracy: %.4f" % (val_acc * 100))
 
     loss = 0
@@ -263,9 +265,15 @@ if __name__ == "__main__":
     best = None
     for iter in range(1, n_iters + 1):
         val_loss = train(
-            encoder, decoder, enc_optimizer, dec_optimizer, criterion, iter - 1
+            trainset,
+            encoder,
+            decoder,
+            enc_optimizer,
+            dec_optimizer,
+            criterion,
+            iter - 1,
         )
-        val_acc = evaluate(encoder, decoder, iter - 1)
+        val_acc = evaluate(testset, encoder, decoder, iter - 1)
         loss += val_loss
 
         # Print iter number, loss, name and guess
